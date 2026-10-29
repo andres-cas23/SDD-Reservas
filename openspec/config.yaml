@@ -1,4 +1,6 @@
 schema: spec-driven
+githubCopilot:
+  cloudAgent: true
 
 # Project context (optional)
 # Add only constraints that should guide OpenSpec artifacts and workflows.
