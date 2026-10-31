@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sdd-reservas"
+version = "0.1.0"
+description = "API de identidad para el sistema de reservas académicas"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.14",
+    "bcrypt>=4.2",
+    "email-validator>=2.2",
+    "fastapi>=0.115",
+    "psycopg[binary]>=3.2",
+    "python-dotenv>=1.0",
+    "pydantic-settings>=2.7",
+    "PyJWT>=2.10",
+    "sqlalchemy>=2.0",
+    "uvicorn[standard]>=0.34",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx>=0.28",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
