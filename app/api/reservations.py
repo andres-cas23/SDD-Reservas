@@ -19,6 +19,7 @@ from app.schemas import (
     ReservationCreateRequest,
     ReservationDecisionRequest,
     ReservationHistoryResponse,
+    ReservationListItemResponse,
     ReservationResponse,
 )
 
@@ -77,6 +78,36 @@ def _reservation_or_404(db: Session, reservation_id: UUID) -> Reservation:
             status_code=status.HTTP_404_NOT_FOUND, detail="Reserva no encontrada."
         )
     return reservation
+
+
+@router.get("", response_model=list[ReservationListItemResponse])
+def list_reservations(
+    actor: AuthenticatedUser = Depends(require_enabled_user),
+    db: Session = Depends(get_db),
+):
+    query = (
+        select(Reservation, AcademicSpace.name)
+        .join(AcademicSpace, Reservation.space_id == AcademicSpace.id)
+    )
+    if actor.user.role != "ADMIN":
+        query = query.where(Reservation.requester_user_id == actor.user.id)
+
+    return [
+        ReservationListItemResponse(
+            status=reservation.status,
+            space=space_name,
+            date=reservation.booking_date,
+            start_time=reservation.start_time,
+            end_time=reservation.end_time,
+        )
+        for reservation, space_name in db.execute(
+            query.order_by(
+                Reservation.booking_date,
+                Reservation.start_time,
+                Reservation.id,
+            )
+        )
+    ]
 
 
 @router.post("", response_model=ReservationResponse, status_code=status.HTTP_201_CREATED)

@@ -110,6 +110,7 @@ La lista devuelve los espacios ordenados por nombre e incluye el estado de cada 
 
 | Método | Ruta | Uso |
 |---|---|---|
+| `GET` | `/reservations` | Lista las reservas propias para un usuario HABILITADO; el administrador HABILITADO ve todas |
 | `POST` | `/reservations` | Crea una solicitud PENDIENTE; requiere usuario HABILITADO |
 | `POST` | `/reservations/{reservation_id}/approve` | Aprueba una solicitud pendiente; requiere administrador |
 | `POST` | `/reservations/{reservation_id}/reject` | Rechaza una solicitud pendiente con motivo; requiere administrador |
@@ -122,5 +123,7 @@ Al aprobar, las solicitudes PENDIENTE traslapadas del mismo espacio se marcan RE
 |---|---|---|
 | `POST` | `/reservations/{reservation_id}/cancel` | Cancela una reserva propia PENDIENTE o APROBADA con motivo |
 | `GET` | `/reservations/{reservation_id}/history` | Consulta el historial; el administrador puede consultar cualquiera y el solicitante solo el propio |
+
+Cada elemento de la lista incluye `status`, `space` (nombre del espacio), `date`, `start_time` y `end_time`. Una solicitud no autenticada responde `401`; una cuenta autenticada sin estado HABILITADO responde `403`.
 
 La cancelación recibe `{"reason":"..."}` no vacío. Una reserva RECHAZADA o CANCELADA responde `409` si se intenta cancelar otra vez; otro usuario recibe `403`. Cancelar una reserva APROBADA libera inmediatamente su horario. El historial incluye actor, instante UTC, estado anterior y nuevo y motivo cuando corresponde; los registros son inmutables. Al deshabilitar a un usuario, la misma transacción cancela sus solicitudes PENDIENTE y sus reservas APROBADA futuras con motivo `usuario deshabilitado`; si el cambio falla, se revierten también las modificaciones de reservas.

@@ -138,6 +138,14 @@ class ReservationResponse(BaseModel):
     created_at: datetime
 
 
+class ReservationListItemResponse(BaseModel):
+    status: str
+    space: str
+    date: date
+    start_time: time
+    end_time: time
+
+
 class ReservationHistoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
