@@ -124,6 +124,7 @@ Cada requisito tiene un identificador que se usa en las especificaciones de Open
 | RF-14 | El solicitante cancela sus propias reservas. Al cancelar una reserva `APROBADA`, el espacio queda libre de inmediato. Los estados `RECHAZADA` y `CANCELADA` son finales. |
 | RF-15 | Al deshabilitar a un usuario, sus solicitudes `PENDIENTE` y sus reservas `APROBADA` futuras pasan a `CANCELADA` con el motivo "usuario deshabilitado". |
 | RF-16 | Cada cambio de estado de una reserva queda registrado con: identificador de la reserva, responsable, fecha y hora en UTC, estado anterior, estado nuevo y motivo (obligatorio en rechazos, cancelaciones y deshabilitaciones). Los registros no se editan ni se borran. |
+| RF-18 | El solicitante consulta el listado de sus propias reservas, y el administrador consulta el de todas, con estado, espacio, fecha y horario. Un usuario sin permiso recibe `403`. |
 
 **Fase 4: cambio solicitado por la institución**
 
