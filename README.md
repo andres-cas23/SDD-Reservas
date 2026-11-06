@@ -67,6 +67,27 @@ Los secretos se configuran mediante variables de entorno (o `.env` local, ignora
 
 ## Pruebas y cobertura
 
+Las pruebas de `pytest` usan SQLite en memoria mediante `tests/conftest.py`; no se conectan a la base PostgreSQL de desarrollo. Para pruebas de migraciones o integración con PostgreSQL hay un servicio aislado `test-db`, con la base `reservas_test` en el puerto `5433` y un volumen separado:
+
+```powershell
+docker compose --profile test up -d test-db
+$env:DATABASE_URL = "postgresql+psycopg://reservas:reservas@localhost:5433/reservas_test"
+alembic upgrade head
+```
+
+Los downgrades de migraciones deben ejecutarse únicamente con esa URL de pruebas configurada, nunca con la URL de desarrollo que apunta a `localhost:5432/reservas`. Por ejemplo:
+
+```powershell
+alembic downgrade base
+Remove-Item Env:DATABASE_URL
+```
+
+Al terminar, se puede detener el servicio de pruebas sin afectar la base de desarrollo:
+
+```powershell
+docker compose --profile test stop test-db
+```
+
 ```powershell
 python -m pytest --cov=app --cov-report=term-missing
 ```
