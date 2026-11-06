@@ -32,6 +32,9 @@ include = ["app*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "postgresql: requires the isolated PostgreSQL integration test database",
+]
 
 [tool.coverage.run]
 source = ["app"]

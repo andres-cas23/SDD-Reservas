@@ -1,7 +1,19 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, time as wall_time, timezone
 from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, Uuid, event, text
+from sqlalchemy import (
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Time,
+    Uuid,
+    event,
+    text,
+)
+from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy.orm import Mapped, Session as OrmSession, mapped_column
 
 from app.db import Base
@@ -110,12 +122,121 @@ class AccountHistory(Base):
     )
 
 
+class AcademicSpace(Base):
+    __tablename__ = "academic_spaces"
+    __table_args__ = (
+        CheckConstraint(
+            "type IN ('LABORATORIO', 'AUDITORIO', 'SALA_COMPUTO')",
+            name="ck_academic_spaces_type",
+        ),
+        CheckConstraint(
+            "capacity > 0",
+            name="ck_academic_spaces_capacity",
+        ),
+        CheckConstraint(
+            "status IN ('ACTIVO', 'INACTIVO')",
+            name="ck_academic_spaces_status",
+        ),
+        Index("ix_academic_spaces_status_name", "status", "name"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    type: Mapped[str] = mapped_column(String(32), nullable=False)
+    capacity: Mapped[int] = mapped_column(nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="ACTIVO", server_default="ACTIVO"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+
+
+class Reservation(Base):
+    __tablename__ = "reservations"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('PENDIENTE', 'APROBADA', 'RECHAZADA', 'CANCELADA')",
+            name="ck_reservations_status",
+        ),
+        CheckConstraint("start_time < end_time", name="ck_reservations_time_order"),
+        Index("ix_reservations_space_date_status", "space_id", "booking_date", "status"),
+        Index("ix_reservations_requester", "requester_user_id", "booking_date"),
+        ExcludeConstraint(
+            ("space_id", "="),
+            (
+                text("tsrange(booking_date + start_time, booking_date + end_time, '[)')"),
+                "&&",
+            ),
+            where=text("status = 'APROBADA'"),
+            using="gist",
+            name="ex_reservations_approved_no_overlap",
+        ).ddl_if(dialect="postgresql"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    space_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("academic_spaces.id", ondelete="RESTRICT"), nullable=False
+    )
+    requester_user_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    booking_date: Mapped[date] = mapped_column(Date, nullable=False)
+    start_time: Mapped[wall_time] = mapped_column(Time, nullable=False)
+    end_time: Mapped[wall_time] = mapped_column(Time, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="PENDIENTE", server_default="PENDIENTE"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+
+
+class ReservationHistory(Base):
+    __tablename__ = "reservation_history"
+    __table_args__ = (
+        CheckConstraint(
+            "old_status IS NULL OR old_status IN ('PENDIENTE', 'APROBADA', 'RECHAZADA', 'CANCELADA')",
+            name="ck_reservation_history_old_status",
+        ),
+        CheckConstraint(
+            "new_status IN ('PENDIENTE', 'APROBADA', 'RECHAZADA', 'CANCELADA')",
+            name="ck_reservation_history_new_status",
+        ),
+        Index("ix_reservation_history_reservation_created", "reservation_id", "created_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    reservation_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("reservations.id", ondelete="RESTRICT"), nullable=False
+    )
+    actor_user_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    old_status: Mapped[str | None] = mapped_column(String(16))
+    new_status: Mapped[str] = mapped_column(String(16), nullable=False)
+    reason: Mapped[str | None] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+
+
 @event.listens_for(OrmSession, "before_flush")
-def prevent_account_history_mutation(session, _flush_context, _instances) -> None:
-    if any(isinstance(record, AccountHistory) for record in session.deleted):
-        raise ValueError("account_history es append-only.")
+def prevent_history_mutation(session, _flush_context, _instances) -> None:
+    history_types = (AccountHistory, ReservationHistory)
+    if any(isinstance(record, history_types) for record in session.deleted):
+        raise ValueError("El historial es append-only.")
     if any(
-        isinstance(record, AccountHistory) and session.is_modified(record)
+        isinstance(record, history_types) and session.is_modified(record)
         for record in session.dirty
     ):
-        raise ValueError("account_history es append-only.")
+        raise ValueError("El historial es append-only.")

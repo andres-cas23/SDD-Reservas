@@ -93,3 +93,34 @@ python -m pytest --cov=app --cov-report=term-missing
 ```
 
 La configuración exige una cobertura mínima del 80 % del paquete `app`.
+
+## API de espacios
+
+| Método | Ruta | Uso |
+|---|---|---|
+| `POST` | `/spaces` | Registra un espacio; requiere administrador |
+| `GET` | `/spaces` | Lista espacios; requiere usuario HABILITADO |
+| `GET` | `/spaces/{space_id}/availability?date=YYYY-MM-DD` | Consulta franjas ocupadas y libres; requiere usuario HABILITADO |
+
+El registro recibe `{"name":"Auditorio","type":"AUDITORIO","capacity":120,"status":"ACTIVO"}`. Los tipos admitidos son `LABORATORIO`, `AUDITORIO` y `SALA_COMPUTO`; los estados son `ACTIVO` e `INACTIVO`. El nombre no puede estar vacío y la capacidad debe ser positiva. Los datos no válidos responden `422`; un usuario sin rol de administrador recibe `403`.
+
+La lista devuelve los espacios ordenados por nombre e incluye el estado de cada uno. La disponibilidad recibe una fecha académica en `America/Bogota` y devuelve `space_id`, `date`, `occupied` y `free`, como listas de intervalos con `start` y `end`. Solo las reservas `APROBADA` ocupan franjas. La ventana diaria es de 07:00 a 21:00; un día sin reservas devuelve ocupación vacía y una franja libre de 07:00 a 21:00. Un espacio inexistente responde `404` y una cuenta no HABILITADA responde `403`.
+
+## API de reservas
+
+| Método | Ruta | Uso |
+|---|---|---|
+| `POST` | `/reservations` | Crea una solicitud PENDIENTE; requiere usuario HABILITADO |
+| `POST` | `/reservations/{reservation_id}/approve` | Aprueba una solicitud pendiente; requiere administrador |
+| `POST` | `/reservations/{reservation_id}/reject` | Rechaza una solicitud pendiente con motivo; requiere administrador |
+
+La solicitud recibe `{"space_id":"<uuid>","date":"2026-11-10","start_time":"10:00","end_time":"12:00"}`. El espacio debe estar ACTIVO, y el intervalo debe estar dentro de 07:00–21:00 en `America/Bogota`, con hora de inicio anterior a la hora de fin. Las horas fuera del horario o intervalos no válidos responden `422`; un espacio inactivo responde `409`. Las solicitudes PENDIENTE pueden traslaparse. Un traslape con una reserva APROBADA responde `409` e incluye `reservation_id` del conflicto. Los intervalos contiguos no se consideran traslapados.
+
+Al aprobar, las solicitudes PENDIENTE traslapadas del mismo espacio se marcan RECHAZADA con motivo `conflicto con reserva aprobada`. El rechazo manual requiere `{"reason":"..."}` no vacío. Los intentos de aprobar o rechazar por usuarios no administradores responden `403`; las transiciones desde estados distintos de PENDIENTE responden `409`.
+
+| Método | Ruta | Uso |
+|---|---|---|
+| `POST` | `/reservations/{reservation_id}/cancel` | Cancela una reserva propia PENDIENTE o APROBADA con motivo |
+| `GET` | `/reservations/{reservation_id}/history` | Consulta el historial; el administrador puede consultar cualquiera y el solicitante solo el propio |
+
+La cancelación recibe `{"reason":"..."}` no vacío. Una reserva RECHAZADA o CANCELADA responde `409` si se intenta cancelar otra vez; otro usuario recibe `403`. Cancelar una reserva APROBADA libera inmediatamente su horario. El historial incluye actor, instante UTC, estado anterior y nuevo y motivo cuando corresponde; los registros son inmutables. Al deshabilitar a un usuario, la misma transacción cancela sus solicitudes PENDIENTE y sus reservas APROBADA futuras con motivo `usuario deshabilitado`; si el cambio falla, se revierten también las modificaciones de reservas.

@@ -67,3 +67,14 @@ def require_admin(
             detail="Se requiere una cuenta de administrador activa.",
         )
     return authenticated
+
+
+def require_enabled_user(
+    authenticated: AuthenticatedUser = Depends(get_authenticated_user),
+) -> AuthenticatedUser:
+    if authenticated.user.status != "HABILITADO":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Se requiere una cuenta habilitada.",
+        )
+    return authenticated

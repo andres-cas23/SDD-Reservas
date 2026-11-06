@@ -3,6 +3,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.api.auth import router as auth_router
+from app.api.reservations import router as reservations_router
+from app.api.spaces import router as spaces_router
 from app.api.users import router as users_router
 from app.config import Settings, get_settings
 from app.mailer import send_verification_email
@@ -17,6 +19,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     application.include_router(auth_router)
     application.include_router(users_router)
+    application.include_router(spaces_router)
+    application.include_router(reservations_router)
 
     @application.exception_handler(RequestValidationError)
     async def validation_error_handler(

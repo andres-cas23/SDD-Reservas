@@ -1,4 +1,6 @@
 from uuid import UUID
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, text
@@ -6,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import AuthenticatedUser, require_admin
 from app.db import get_db
-from app.models import AccountHistory, User, utc_now
+from app.models import AccountHistory, Reservation, ReservationHistory, User, utc_now
 from app.schemas import (
     AccountHistoryResponse,
     RoleRequest,
@@ -21,6 +23,7 @@ VALID_STATUS_TRANSITIONS = {
     ("DESHABILITADO", "HABILITADO"),
 }
 ACTIVE_ADMIN_STATUSES = {"VERIFICADO", "HABILITADO"}
+ACADEMIC_TIMEZONE = ZoneInfo("America/Bogota")
 
 
 @router.get("", response_model=list[UserResponse])
@@ -63,6 +66,35 @@ def change_user_status(
             created_at=now,
         )
     )
+    if payload.status == "DESHABILITADO":
+        local_now = now.astimezone(ACADEMIC_TIMEZONE)
+        reservations = db.scalars(
+            select(Reservation)
+            .where(
+                Reservation.requester_user_id == user.id,
+                Reservation.status.in_(("PENDIENTE", "APROBADA")),
+            )
+            .with_for_update()
+        ).all()
+        for reservation in reservations:
+            reservation_start = datetime.combine(
+                reservation.booking_date,
+                reservation.start_time,
+                tzinfo=ACADEMIC_TIMEZONE,
+            )
+            if reservation.status == "PENDIENTE" or reservation_start > local_now:
+                previous_status = reservation.status
+                reservation.status = "CANCELADA"
+                db.add(
+                    ReservationHistory(
+                        reservation_id=reservation.id,
+                        actor_user_id=actor.user.id,
+                        old_status=previous_status,
+                        new_status="CANCELADA",
+                        reason="usuario deshabilitado",
+                        created_at=now,
+                    )
+                )
     db.commit()
     db.refresh(user)
     return user
