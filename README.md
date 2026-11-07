@@ -6,6 +6,7 @@ Etapa 1 implementa el registro, la verificación de correo, la autenticación y 
 
 - Python 3.12 o posterior
 - Docker Compose
+- Node.js y npm (para la interfaz web)
 
 ## Inicio local
 
@@ -64,6 +65,20 @@ Etapa 1 implementa el registro, la verificación de correo, la autenticación y 
 Los tokens de verificación y activación se ubican en el fragmento (`#token=...`) del enlace, que no se envía al servidor ni aparece en los logs de acceso. Para completar los flujos API, se copia el token del fragmento y se envía en el cuerpo JSON del endpoint correspondiente. Los tokens se guardan en la base de datos solo como hashes.
 
 Los secretos se configuran mediante variables de entorno (o `.env` local, ignorado por Git). Las credenciales y los tokens no deben incluirse en logs. En despliegues reales, proporciona credenciales y URLs de PostgreSQL/SMTP específicas del entorno y guarda `SECRETS_DIR` fuera del repositorio.
+
+## Interfaz web
+
+La aplicación React/Vite está en `frontend/`. Desde esa carpeta instala dependencias y arranca el servidor de desarrollo:
+
+```powershell
+Set-Location frontend
+npm install
+npm run dev
+```
+
+Vite publica la interfaz en `http://localhost:5173` y reenvía las solicitudes `/api/*` al backend en `http://127.0.0.1:8000` por defecto. Se puede cambiar el destino con `VITE_API_PROXY_TARGET` en `frontend/.env.local`; la base API predeterminada es `/api` y se puede ajustar con `VITE_API_BASE_URL`. Consulta `frontend/README.md` para producción.
+
+Para que los enlaces de verificación y activación inicial abran la interfaz, configura `APP_BASE_URL` con el origen del frontend. En producción, enruta `/api/*` a FastAPI y sirve la SPA para sus rutas cliente (`/auth/verify` y `/auth/activate-admin`).
 
 ## Pruebas y cobertura
 
