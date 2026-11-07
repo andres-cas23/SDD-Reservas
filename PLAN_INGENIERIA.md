@@ -299,7 +299,7 @@ Cada requisito se rastrea en una matriz que relaciona su identificador con el m√
 | RF-14 | `reservations` | Cancelar una reserva rechazada responde error; cancelar una aprobada libera el espacio | 2 | Pendiente |
 | RF-15 | `users`, `reservations` | Deshabilitar cancela pendientes y aprobadas futuras | 2 | Pendiente |
 | RF-16 | `history` | Cambio de estado de reserva genera registro; `UPDATE` sobre el historial falla | 2 | Pendiente |
-| RF-17 | `reservations` | Reserva de 4 horas y 1 minuto responde `422` | 4 | Pendiente |
+| RF-17 | `reservations` | Reserva de 4 horas y 1 minuto responde `422` | 4 | Verificado |
 | RNF-01 | `availability` | Consulta con 500 reservas responde en menos de 2 segundos | 2 | Pendiente |
 | RNF-02 | `auth` | Hash bcrypt verificado; ausencia de tokens y contrase√±as en logs | 1 | Pendiente |
 | RNF-03 | Todos | Fechas guardadas en UTC | 2 | Pendiente |
