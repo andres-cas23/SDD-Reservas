@@ -15,6 +15,10 @@ from app.api.dependencies import (
 )
 from app.db import get_db
 from app.models import AcademicSpace, Reservation, ReservationHistory, utc_now
+from app.services.reservations import (
+    ReservationDurationExceeded,
+    validate_reservation_duration,
+)
 from app.schemas import (
     ReservationCreateRequest,
     ReservationDecisionRequest,
@@ -126,6 +130,13 @@ def create_reservation(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="El horario debe estar entre 07:00 y 21:00 y la hora de inicio debe preceder a la hora de fin.",
         )
+    try:
+        validate_reservation_duration(payload.start_time, payload.end_time)
+    except ReservationDurationExceeded as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(error),
+        ) from error
 
     space = _get_space_for_update(db, payload.space_id)
     if space is None:
