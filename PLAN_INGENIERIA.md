@@ -83,7 +83,7 @@ Aplicación web en la que los usuarios se registran con su correo y lo verifican
 1. **`auth`:** registro, verificación de correo, inicio y cierre de sesión, tokens y administrador inicial.
 2. **`users`:** estados de habilitación, roles, promoción y revocación.
 3. **`spaces`:** espacios con nombre, tipo, capacidad y estado.
-4. **`bookings`:** solicitudes, aprobación, rechazo, cancelación y validación de traslapes.
+4. **`reservations`:** solicitudes, aprobación, rechazo, cancelación y validación de traslapes.
 5. **`availability`:** cálculo de franjas libres por espacio y fecha.
 6. **`history`:** registro de cambios de cuentas y de reservas.
 
@@ -124,7 +124,6 @@ Cada requisito tiene un identificador que se usa en las especificaciones de Open
 | RF-14 | El solicitante cancela sus propias reservas. Al cancelar una reserva `APROBADA`, el espacio queda libre de inmediato. Los estados `RECHAZADA` y `CANCELADA` son finales. |
 | RF-15 | Al deshabilitar a un usuario, sus solicitudes `PENDIENTE` y sus reservas `APROBADA` futuras pasan a `CANCELADA` con el motivo "usuario deshabilitado". |
 | RF-16 | Cada cambio de estado de una reserva queda registrado con: identificador de la reserva, responsable, fecha y hora en UTC, estado anterior, estado nuevo y motivo (obligatorio en rechazos, cancelaciones y deshabilitaciones). Los registros no se editan ni se borran. |
-| RF-18 | El solicitante consulta el listado de sus propias reservas, y el administrador consulta el de todas, con estado, espacio, fecha y horario. Un usuario sin permiso recibe `403`. |
 
 **Fase 4: cambio solicitado por la institución**
 
@@ -140,7 +139,7 @@ Cada requisito tiene un identificador que se usa en las especificaciones de Open
 | RNF-02 | Las contraseñas se guardan con bcrypt. Ni las contraseñas ni los tokens aparecen en logs, en respuestas de error ni en la salida de consola. |
 | RNF-03 | Las fechas se guardan en UTC y se muestran en la zona horaria institucional. |
 | RNF-04 | La clave JWT, la contraseña SMTP, `ADMIN_EMAIL` y `SECRETS_DIR` se leen de variables de entorno, nunca del código. |
-| RNF-05 | La cobertura de pruebas es de al menos 80 % en los módulos `auth`, `users`, `bookings` y `availability`. |
+| RNF-05 | La cobertura de pruebas es de al menos 80 % en los módulos `auth`, `users`, `reservations` y `availability`. |
 | RNF-06 | La aplicación completa (API, base de datos y migraciones) se levanta con un solo comando de Docker Compose. |
 | RNF-07 | La interfaz funciona en navegadores modernos de escritorio y móvil. |
 
@@ -293,14 +292,14 @@ Cada requisito se rastrea en una matriz que relaciona su identificador con el m�
 | RF-07 | `history` | Cada cambio de estado de usuario genera un registro, incluida la verificación | 1 | Pendiente |
 | RF-08 | `spaces` | Alta con tipo inválido se rechaza | 2 | Pendiente |
 | RF-09 | `availability` | Usuario no habilitado recibe `403` | 2 | Pendiente |
-| RF-10 | `bookings` | Fin anterior o igual al inicio se rechaza | 2 | Pendiente |
-| RF-11 | `bookings`, BD | Traslape con aprobada responde `409`; borde 12:00 aceptado; dos aprobaciones simultáneas no pasan | 2 | Pendiente |
-| RF-12 | `bookings` | Dos pendientes traslapadas se crean; al aprobar una, la otra queda `RECHAZADA` con motivo | 2 | Pendiente |
-| RF-13 | `bookings` | Solicitante que aprueba recibe `403` | 2 | Pendiente |
-| RF-14 | `bookings` | Cancelar una reserva rechazada responde error; cancelar una aprobada libera el espacio | 2 | Pendiente |
-| RF-15 | `users`, `bookings` | Deshabilitar cancela pendientes y aprobadas futuras | 2 | Pendiente |
+| RF-10 | `reservations` | Fin anterior o igual al inicio se rechaza | 2 | Pendiente |
+| RF-11 | `reservations`, BD | Traslape con aprobada responde `409`; borde 12:00 aceptado; dos aprobaciones simultáneas no pasan | 2 | Pendiente |
+| RF-12 | `reservations` | Dos pendientes traslapadas se crean; al aprobar una, la otra queda `RECHAZADA` con motivo | 2 | Pendiente |
+| RF-13 | `reservations` | Solicitante que aprueba recibe `403` | 2 | Pendiente |
+| RF-14 | `reservations` | Cancelar una reserva rechazada responde error; cancelar una aprobada libera el espacio | 2 | Pendiente |
+| RF-15 | `users`, `reservations` | Deshabilitar cancela pendientes y aprobadas futuras | 2 | Pendiente |
 | RF-16 | `history` | Cambio de estado de reserva genera registro; `UPDATE` sobre el historial falla | 2 | Pendiente |
-| RF-17 | `bookings` | Reserva de 4 horas y 1 minuto responde `422` | 4 | Pendiente |
+| RF-17 | `reservations` | Reserva de 4 horas y 1 minuto responde `422` | 4 | Pendiente |
 | RNF-01 | `availability` | Consulta con 500 reservas responde en menos de 2 segundos | 2 | Pendiente |
 | RNF-02 | `auth` | Hash bcrypt verificado; ausencia de tokens y contraseñas en logs | 1 | Pendiente |
 | RNF-03 | Todos | Fechas guardadas en UTC | 2 | Pendiente |
@@ -315,7 +314,7 @@ Cada requisito se rastrea en una matriz que relaciona su identificador con el m�
 
 ### 6.1 Uso de OpenSpec
 
-OpenSpec es la fuente de verdad del sistema. El repositorio contiene una carpeta `openspec/` con una especificación por módulo (`auth.md`, `users.md`, `spaces.md`, `bookings.md`, `availability.md`, `history.md`). Cada especificación incluye su propósito, sus requisitos con los identificadores de la sección 2.5 y sus escenarios de aceptación. Los cambios se proponen en OpenSpec antes de programarse, se dividen en tareas y quedan registrados en el historial de cambios.
+OpenSpec es la fuente de verdad del sistema. El repositorio contiene una carpeta `openspec/` con una especificación por módulo (`auth.md`, `users.md`, `spaces.md`, `reservations.md`, `availability.md`, `history.md`). Cada especificación incluye su propósito, sus requisitos con los identificadores de la sección 2.5 y sus escenarios de aceptación. Los cambios se proponen en OpenSpec antes de programarse, se dividen en tareas y quedan registrados en el historial de cambios.
 
 Regla de trabajo: cualquier cambio de comportamiento empieza actualizando la especificación. No se modifica código sin antes actualizar su especificación.
 
@@ -366,7 +365,7 @@ La IA puede proponer alternativas, pero la decisión y su justificación deben s
 Cuando la institución solicita la regla de cuatro horas (Fase 4), el cambio se gestiona así:
 
 1. **Análisis de impacto:** la regla afecta la validación de solicitudes (RF-10), la matriz de verificación (sección 5.3) y las pruebas de concurrencia, porque una reserva más larga puede traslapar más solicitudes. No cambia las decisiones de arquitectura ni el stack.
-2. **Actualización de la especificación:** se crea un cambio en OpenSpec que añade RF-17 a la especificación de `bookings`, con sus escenarios.
+2. **Actualización de la especificación:** se crea un cambio en OpenSpec que añade RF-17 a la especificación de `reservations`, con sus escenarios.
 3. **Escenarios de aceptación:** duración de exactamente cuatro horas, aceptada; cuatro horas y un minuto, rechazada con `422`; duración de cero o negativa, rechazada como antes.
 4. **Implementación y pruebas:** se implementa la regla y se agregan las pruebas de RF-17.
 5. **Regresión:** se ejecutan todas las pruebas de los requisitos RF-01 a RF-16 para confirmar que nada existente se rompió.
