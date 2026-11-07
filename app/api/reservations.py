@@ -94,6 +94,7 @@ def list_reservations(
 
     return [
         ReservationListItemResponse(
+            id=reservation.id,
             status=reservation.status,
             space=space_name,
             date=reservation.booking_date,

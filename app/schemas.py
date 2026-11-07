@@ -139,6 +139,7 @@ class ReservationResponse(BaseModel):
 
 
 class ReservationListItemResponse(BaseModel):
+    id: UUID
     status: str
     space: str
     date: date

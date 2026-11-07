@@ -304,3 +304,10 @@ def logout(
     )
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/me")
+def get_current_user_profile(
+    authenticated: AuthenticatedUser = Depends(get_authenticated_user),
+):
+    return {"role": authenticated.user.role}

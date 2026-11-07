@@ -51,26 +51,23 @@ def test_requester_lists_only_their_reservations_with_rf18_fields(
     )
     db_session.add_all((own_space, other_space))
     db_session.flush()
-    db_session.add_all(
-        (
-            Reservation(
-                space_id=own_space.id,
-                requester_user_id=requester.id,
-                booking_date=date(2026, 11, 10),
-                start_time=time(10),
-                end_time=time(12),
-                status="PENDIENTE",
-            ),
-            Reservation(
-                space_id=other_space.id,
-                requester_user_id=other_requester.id,
-                booking_date=date(2026, 11, 11),
-                start_time=time(13),
-                end_time=time(14),
-                status="APROBADA",
-            ),
-        )
+    own_reservation = Reservation(
+        space_id=own_space.id,
+        requester_user_id=requester.id,
+        booking_date=date(2026, 11, 10),
+        start_time=time(10),
+        end_time=time(12),
+        status="PENDIENTE",
     )
+    other_reservation = Reservation(
+        space_id=other_space.id,
+        requester_user_id=other_requester.id,
+        booking_date=date(2026, 11, 11),
+        start_time=time(13),
+        end_time=time(14),
+        status="APROBADA",
+    )
+    db_session.add_all((own_reservation, other_reservation))
     db_session.commit()
 
     response = client.get(
@@ -80,6 +77,7 @@ def test_requester_lists_only_their_reservations_with_rf18_fields(
     assert response.status_code == 200
     assert response.json() == [
         {
+            "id": str(own_reservation.id),
             "status": "PENDIENTE",
             "space": "Requester Hall",
             "date": "2026-11-10",
@@ -107,26 +105,23 @@ def test_admin_lists_all_reservations(client, db_session):
     ]
     db_session.add_all(spaces)
     db_session.flush()
-    db_session.add_all(
-        (
-            Reservation(
-                space_id=spaces[0].id,
-                requester_user_id=requester.id,
-                booking_date=date(2026, 11, 10),
-                start_time=time(9),
-                end_time=time(10),
-                status="PENDIENTE",
-            ),
-            Reservation(
-                space_id=spaces[1].id,
-                requester_user_id=admin.id,
-                booking_date=date(2026, 11, 11),
-                start_time=time(15),
-                end_time=time(16),
-                status="APROBADA",
-            ),
-        )
+    first_reservation = Reservation(
+        space_id=spaces[0].id,
+        requester_user_id=requester.id,
+        booking_date=date(2026, 11, 10),
+        start_time=time(9),
+        end_time=time(10),
+        status="PENDIENTE",
     )
+    second_reservation = Reservation(
+        space_id=spaces[1].id,
+        requester_user_id=admin.id,
+        booking_date=date(2026, 11, 11),
+        start_time=time(15),
+        end_time=time(16),
+        status="APROBADA",
+    )
+    db_session.add_all((first_reservation, second_reservation))
     db_session.commit()
 
     response = client.get("/reservations", headers=_login(client, admin.email))
@@ -134,6 +129,7 @@ def test_admin_lists_all_reservations(client, db_session):
     assert response.status_code == 200
     assert response.json() == [
         {
+            "id": str(first_reservation.id),
             "status": "PENDIENTE",
             "space": "First Hall",
             "date": "2026-11-10",
@@ -141,6 +137,7 @@ def test_admin_lists_all_reservations(client, db_session):
             "end_time": "10:00:00",
         },
         {
+            "id": str(second_reservation.id),
             "status": "APROBADA",
             "space": "Second Hall",
             "date": "2026-11-11",
